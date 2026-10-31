@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Support Knowledge Assistant</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <header>
+    <h1>Support Knowledge Assistant</h1>
+    <div id="whoami" hidden>
+      <a id="admin-link" href="/admin" hidden>Admin</a>
+      <span id="user-chip"></span>
+      <button id="logout" type="button" class="link">Log out</button>
+    </div>
+  </header>
+
+  <main>
+    <section id="login-view" class="card" aria-labelledby="login-title">
+      <h2 id="login-title">Sign in</h2>
+      <form id="login-form" autocomplete="on">
+        <label>Username <input id="username" name="username" autocomplete="username" required maxlength="64"></label>
+        <label>Password <input id="password" name="password" type="password" autocomplete="current-password" required maxlength="256"></label>
+        <button type="submit">Sign in</button>
+        <p id="login-error" class="error" role="alert" hidden></p>
+      </form>
+    </section>
+
+    <section id="chat-view" hidden>
+      <div id="transcript" aria-live="polite">
+        <p class="hint">Ask a question about the support handbook. Answers cite the pages they came from, and you only see pages your role may access.</p>
+      </div>
+      <form id="ask-form">
+        <textarea id="question" rows="2" maxlength="500" placeholder="e.g. How do I handle a ticket that contains a customer's password?" required></textarea>
+        <button id="ask-button" type="submit">Ask</button>
+      </form>
+    </section>
+  </main>
+
+  <script src="/static/lib.js"></script>
+  <script src="/static/app.js"></script>
+</body>
+</html>

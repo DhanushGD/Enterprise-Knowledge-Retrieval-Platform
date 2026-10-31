@@ -1,0 +1,21 @@
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+rule_files:
+  - /etc/prometheus/alerts.yml
+
+scrape_configs:
+  # The FastAPI service (Step 11) runs on the host and exposes GET /metrics (Step 13).
+  - job_name: rag-api
+    metrics_path: /metrics
+    static_configs:
+      - targets: ["host.docker.internal:8000"]
+    # If you set METRICS_TOKEN in .env, give Prometheus the same value:
+    # authorization:
+    #   type: Bearer
+    #   credentials: "<the same token>"
+
+  - job_name: prometheus
+    static_configs:
+      - targets: ["localhost:9090"]

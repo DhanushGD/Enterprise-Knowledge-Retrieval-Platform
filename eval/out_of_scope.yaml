@@ -1,0 +1,13 @@
+# Questions a support-handbook assistant should refuse. Used to calibrate the relevance gate
+# (scripts/calibrate_gate.py) and, in Step 12, to measure how often it wrongly answers.
+questions:
+  - What is the weather like in Paris today?
+  - Give me a recipe for chocolate chip cookies.
+  - Who won the football world cup in 2018?
+  - How do I train a neural network in PyTorch?
+  - What is the capital of Australia?
+  - Write me a poem about the ocean.
+  - How do I change a flat tire on a bicycle?
+  - What is the best programming language to learn first?
+  - How many calories are in a banana?
+  - Explain how photosynthesis works.

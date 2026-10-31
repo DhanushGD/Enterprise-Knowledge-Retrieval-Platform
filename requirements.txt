@@ -1,0 +1,27 @@
+# Core
+pydantic>=2.7
+pydantic-settings>=2.3
+pyyaml>=6.0
+python-dotenv>=1.0
+
+# Storage clients
+boto3>=1.34
+psycopg[binary]>=3.2
+sqlalchemy>=2.0
+qdrant-client>=1.10
+redis>=5.0
+
+# Check script
+requests>=2.32
+
+# Added in later steps (installed now so the env is stable)
+fastembed>=0.4.0
+fastapi>=0.111
+uvicorn[standard]>=0.30
+PyJWT>=2.8
+slowapi>=0.1.9
+apscheduler>=3.10,<4
+prometheus-client>=0.20
+pypdf>=4.0
+pytest>=8.0
+httpx>=0.27          # FastAPI TestClient

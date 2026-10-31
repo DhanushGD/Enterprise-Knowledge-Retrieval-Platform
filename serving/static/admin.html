@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Admin - Support Knowledge Assistant</title>
+  <link rel="stylesheet" href="/static/app.css">
+</head>
+<body>
+  <header>
+    <h1>Admin <span class="muted">operations dashboard</span></h1>
+    <nav>
+      <a href="/">Chat</a>
+      <span id="user-chip"></span>
+    </nav>
+  </header>
+
+  <main class="wide">
+    <p id="admin-error" class="error" role="alert" hidden></p>
+
+    <section id="admin-view" hidden>
+      <div class="toolbar">
+        <span id="updated" class="muted"></span>
+        <button id="refresh" type="button" class="link">Refresh now</button>
+      </div>
+
+      <h2>Live numbers (this API process, since start)</h2>
+      <div id="tiles" class="tiles"></div>
+
+      <div class="two">
+        <div class="panel"><h3>Dependencies</h3><ul id="deps" class="plain"></ul></div>
+        <div class="panel"><h3>Protection settings</h3><ul id="controls" class="plain"></ul></div>
+      </div>
+      <div class="two">
+        <div class="panel"><h3>Answers by outcome</h3><ul id="outcomes" class="plain"></ul></div>
+        <div class="panel"><h3>Turned away</h3><ul id="rejections" class="plain"></ul></div>
+      </div>
+
+      <h2>Grafana</h2>
+      <p id="grafana-note" class="muted"></p>
+      <div id="grafana-frame"></div>
+    </section>
+  </main>
+
+  <script src="/static/admin.js"></script>
+</body>
+</html>

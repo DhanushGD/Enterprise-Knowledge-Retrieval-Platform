@@ -1,0 +1,119 @@
+# Alert rules (evaluated by Prometheus; see http://localhost:9090/alerts).
+# Rates need traffic to mean anything, so the ratio alerts also require at least 10 questions in
+# the window. For notifications (Slack/email) add Alertmanager; the rules do not change.
+groups:
+  - name: ekrp-availability
+    rules:
+      - alert: EkrpApiDown
+        expr: up{job="rag-api"} == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "The API is not being scraped"
+          description: "Prometheus cannot reach the API on host.docker.internal:8000 (down, or bound to another address)."
+
+      - alert: EkrpDependencyDown
+        expr: ekrp_dependency_up == 0
+        for: 2m
+        labels: {severity: critical}
+        annotations:
+          summary: "{{ $labels.name }} is failing its health check"
+          description: "The API reports {{ $labels.name }} as down. Answers will fail or degrade until it is back."
+
+      - alert: EkrpModelUnavailable
+        expr: increase(ekrp_asks_total{status="llm_unavailable"}[10m]) > 0
+        for: 0m
+        labels: {severity: warning}
+        annotations:
+          summary: "Questions are being answered without the language model"
+          description: "Users only received the related pages. Is Ollama running and is the model pulled?"
+
+      - alert: EkrpInternalErrors
+        expr: increase(ekrp_stream_errors_total{code="internal"}[10m]) > 0
+        for: 0m
+        labels: {severity: warning}
+        annotations:
+          summary: "Answers are failing with internal errors"
+          description: "Check the API log for 'ask failed'."
+
+      - alert: EkrpHttp5xx
+        expr: sum(increase(ekrp_http_requests_total{status=~"5.."}[10m])) > 0
+        for: 0m
+        labels: {severity: warning}
+        annotations:
+          summary: "The API returned 5xx responses"
+          description: "{{ $value }} server errors in the last 10 minutes."
+
+  - name: ekrp-quality
+    rules:
+      - alert: EkrpHighAbstainRate
+        expr: |
+          (sum(increase(ekrp_asks_total{status="abstained",cached="false"}[30m]))
+            / sum(increase(ekrp_asks_total{cached="false"}[30m]))) > 0.6
+          and sum(increase(ekrp_asks_total{cached="false"}[30m])) >= 10
+        for: 15m
+        labels: {severity: warning}
+        annotations:
+          summary: "More than 60% of questions end in 'not in the knowledge base'"
+          description: "Either users are asking about things the corpus does not cover, or retrieval/ingestion broke (see ekrp_documents and the sync age). Re-run scripts/run_eval.py."
+
+      - alert: EkrpHighUngroundedRate
+        expr: |
+          (sum(increase(ekrp_asks_total{status="ungrounded",cached="false"}[30m]))
+            / sum(increase(ekrp_asks_total{cached="false"}[30m]))) > 0.15
+          and sum(increase(ekrp_asks_total{cached="false"}[30m])) >= 10
+        for: 15m
+        labels: {severity: warning}
+        annotations:
+          summary: "The model often fails to cite its sources"
+          description: "More than 15% of answers were withheld as ungrounded. Did the model or prompt change? Re-run the evaluation."
+
+  - name: ekrp-performance
+    rules:
+      - alert: EkrpSlowAnswers
+        expr: |
+          histogram_quantile(0.95, sum by (le) (rate(ekrp_ask_seconds_bucket{cached="false"}[15m]))) > 60
+          and sum(increase(ekrp_asks_total{cached="false"}[15m])) >= 5
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "95th percentile answer time is over 60 seconds"
+          description: "Normal on this CPU is 15-25 s. Check ollama CPU/RAM use and the generation gate panel."
+
+      - alert: EkrpLoadShedding
+        expr: increase(ekrp_rejections_total{code="busy"}[10m]) > 3
+        for: 0m
+        labels: {severity: warning}
+        annotations:
+          summary: "Requests are being turned away because the model is saturated"
+          description: "More users than one CPU can serve. Raise max_waiting, add capacity, or scale out."
+
+  - name: ekrp-security
+    rules:
+      - alert: EkrpLoginFailureSpike
+        expr: increase(ekrp_logins_total{outcome=~"failed|throttled"}[5m]) > 10
+        for: 0m
+        labels: {severity: warning}
+        annotations:
+          summary: "Many failed login attempts"
+          description: "More than 10 failed or throttled logins in 5 minutes: a forgotten password, or someone guessing."
+
+  - name: ekrp-pipeline
+    rules:
+      - alert: EkrpSyncStale
+        expr: time() - ekrp_last_sync_timestamp_seconds > 36 * 3600
+        for: 10m
+        labels: {severity: warning}
+        annotations:
+          summary: "The knowledge base has not been refreshed for over 36 hours"
+          description: "The nightly Airflow DAG (ekrp_sync) is failing or paused. Answers may be out of date."
+
+      - alert: EkrpDocumentsStuck
+        expr: |
+          sum(ekrp_documents{status=~".*_failed"})
+            / sum(ekrp_documents{status!~"deleted|skipped"}) > 0.05
+        for: 30m
+        labels: {severity: warning}
+        annotations:
+          summary: "More than 5% of documents are stuck in a failed state"
+          description: "Look at the failures with: python -m orchestration.etl verify"

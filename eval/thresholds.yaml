@@ -1,0 +1,25 @@
+# Release gate for scripts/run_eval.py --gate.
+#
+# Set just under the first full run (31 cases, llama3.2:3b on CPU): right page 97%,
+# answered 90%, cited the right page 73%, facts 96%, grounded 84%, off-topic refused 100%.
+# Freeze that run as the baseline with
+#   python scripts/freeze_baseline.py
+# From then on a change that makes any metric worse than the baseline by more than
+# `regression_tolerance` fails the gate, even if it is still above the floors below.
+#
+# Metrics that were not measured (answer metrics in --no-llm mode) are skipped.
+min:
+  retrieved_hit_rate: 0.90       # the right page reaches the model
+  answer_rate: 0.80              # answers when the page is visible to the role
+  cited_expected_rate: 0.65
+  fact_recall: 0.85
+  grounded: 0.75                 # word-overlap proxy; see eval/answer_eval.py
+  oos_refusal_rate: 0.95         # off-topic questions must be refused
+max:
+  ungrounded_rate: 0.10
+  unsupported_sentence_rate: 0.10
+  leaks: 0                       # a page shown to a role that may not see it: never
+  prompt_leaks: 0
+  errors: 0
+  bad_labels: 0
+regression_tolerance: 0.05

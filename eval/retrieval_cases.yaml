@@ -1,0 +1,41 @@
+# Starter retrieval cases for the GitLab support handbook sample.
+#
+# `expected` = substring(s) of the document path that should answer the question.
+# These labels were written from page titles, NOT from reading the pages, so a "miss" can
+# mean a wrong label as easily as a retrieval failure. Run with --show-misses, open the page,
+# and fix the label if it's the label that is wrong. Step 12 grows this into a reviewed
+# golden set. Add your own: real questions are worth more than anything I can guess.
+cases:
+  - question: How do I read kubeSOS output to debug pods?
+    expected: troubleshooting_kubernetes
+  - question: kubectl get pods gitlab-gitaly READY STATUS RESTARTS
+    expected: troubleshooting_kubernetes
+    note: exact-keyword query - sparse should help here
+  - question: How do I publish a package to the NPM registry on GitLab?
+    expected: how-to-create-npm-package
+  - question: What do I do when a ticket is written in a language I don't speak?
+    expected: translating_tickets
+    note: paraphrase - no exact keyword overlap
+  - question: A customer pasted a password into their ticket, how do I remove it?
+    expected: removing-sensitive-information
+    note: paraphrase
+  - question: What is Pairify?
+    expected: pairify
+  - question: How should a support engineer find and pick a ticket to work on?
+    expected: working-on-tickets
+  - question: What is the difference between docs and knowledge base articles?
+    expected: docs-vs-kb
+  - question: What is the process when a customer has an emergency?
+    expected: customer_emergencies
+  - question: How do I troubleshoot errors when a customer cannot complete a purchase on CustomersDot?
+    expected: troubleshoot_errors_while_making_purchases
+  - question: What is the onboarding pathway for a new Support Engineer?
+    expected: training/
+  - question: How do I move an existing support team member through the transition training module?
+    expected: transition_training_module_levelup
+  - question: How do I handle tickets about AI features?
+    expected: ai_features
+  - question: How do I set up the Zendesk view for the runner pod?
+    expected: support-pods/runner
+  - question: How do I create an integrations view in Zendesk?
+    expected: support-pods/integrations

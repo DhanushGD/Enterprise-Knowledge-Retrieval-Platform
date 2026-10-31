@@ -1,0 +1,124 @@
+# Step 1: the "company" this assistant belongs to.
+# Everything downstream (metadata filters, roles, evals) reads from this file,
+# so switching to a real company later means editing this file, not code.
+
+company:
+  name: "OpenDesk Inc."
+  description: >
+    Fictional software company whose support team uses an internal AI assistant.
+    Its knowledge base is built from openly licensed public documentation.
+
+# Where documents come from. Set `type` to one of:
+#   local : a folder on disk (bundled sample docs, good for a first end-to-end run)
+#   git   : sparse-cloned git repos (the open-source corpus)
+#   s3    : an S3-compatible bucket (MinIO now, a real company bucket later)
+source:
+  type: git            # `local` = the 5 bundled sample docs, `s3` = a bucket
+  max_documents: 200   # per source; keep the first real run small, raise later
+
+  local:
+    name: opendesk-sample-docs
+    path: data/sample_docs          # relative to the project root
+    default_department: support
+
+  repos:                            # used when type: git
+    - name: gitlab-handbook-sample
+      url: https://gitlab.com/gitlab-com/content-sites/handbook.git
+      subpath: content/handbook/support
+      license: CC BY-SA 4.0
+      default_department: support
+    - name: gitlab-docs-sample
+      url: https://gitlab.com/gitlab-org/gitlab.git
+      subpath: doc/user
+      license: MIT (docs)
+      default_department: product
+
+  s3:                               # used when type: s3
+    name: company-bucket
+    bucket: support-kb              # may be the same bucket as raw/, different prefix
+    prefix: incoming/               # upload company files under this prefix
+    default_department: support
+
+# Step 6: how documents are split. Tune these in Step 12 and compare eval scores.
+chunking:
+  max_tokens: 320       # hard ceiling per chunk (approx. count; real WordPiece runs ~1.2x, model limit 512)
+  overlap_tokens: 50    # shared words between consecutive chunks of one long section
+  min_tokens: 60        # smaller sections get absorbed into the previous chunk
+
+# Step 8: incremental sync.
+sync:
+  cron: "0 2 * * *"           # nightly at 02:00 local time (used by scripts/run_scheduler.py)
+  max_delete_fraction: 0.3    # refuse to delete more than 30% of a source in one run...
+  delete_floor: 5             # ...but always allow up to 5, so tiny corpora can still shrink
+  timezone: "Asia/Kolkata"    # the cron above is read in this timezone (Airflow DAG); IANA name
+
+# Step 8b: Airflow ETL (orchestration/). Same stages as `sync`, run as separate retryable tasks.
+etl:
+  max_failed_fraction: 0.05   # a stage fails when more than 5% of the documents it handled failed
+
+# Step 9: retrieval. Tune these against the retrieval eval (scripts/run_retrieval_eval.py).
+retrieval:
+  candidates: 30        # chunks fetched by hybrid search; these are what the reranker re-scores
+  top_k: 5              # chunks handed to the LLM
+  max_per_doc: 2        # at most this many chunks from any one document
+  rerank: false         # cross-encoder on/off. OFF because the eval showed no gain (see README,
+                        # "Measured results"); re-test on the Step 12 golden set before enabling.
+
+# Step 10: answer generation. Sized for a CPU running a 3B model (llama3.2:3b via Ollama):
+# prompt reading and answer length are what cost seconds, so both are capped.
+generation:
+  context_chunks: 3        # sources shown to the model (each extra one adds prompt time)
+  max_chunk_chars: 800     # per-source cap, ~200 tokens
+  max_answer_tokens: 220   # hard cap on answer length
+  num_ctx: 2048            # model context window; keep small on CPU
+  min_dense_score: 0.64    # best cosine similarity below this -> "not in the knowledge base",
+                           # without calling the model. Calibrated on this corpus with
+                           # scripts/calibrate_gate.py: real questions scored >= 0.713, off-topic
+                           # ones <= 0.612. Set below the midpoint (0.66) on purpose: wrongly
+                           # refusing a real question costs more than one wasted model call.
+                           # Re-run the script after changing the corpus or embedding model.
+  require_citations: true  # an answer with no valid [n] citation is not presented as an answer
+
+# Step 11: the HTTP API.
+serving:
+  ask_rate_limit: {limit: 12, window_seconds: 60}    # questions per user per minute
+  login_rate_limit: {limit: 5, window_seconds: 60}   # attempts per username per minute
+  ip_login_limit: 20                                 # attempts per client IP per minute
+  max_question_chars: 500
+  cache_enabled: true
+  cache_ttl_seconds: 3600                            # also invalidated whenever the corpus changes
+  max_concurrent_generations: 1                      # CPU: one model run at a time
+  max_waiting: 2                                     # extra requests allowed to queue; more get "busy"
+  queue_timeout_seconds: 30
+  admin_roles: [admin]                               # who may open /admin (metrics + Grafana)
+
+# Synthetic metadata stands in for SharePoint permissions.
+# Ingestion tags each document with one value from each list.
+metadata:
+  department: [support, product, engineering, hr]
+  access_level: [public, internal, restricted]
+  product: [core, billing, integrations, security]
+
+# Role -> what the role is allowed to retrieve (applied as Qdrant filters in Step 9).
+roles:
+  agent:
+    description: Front-line support agent
+    allowed_access_levels: [public]
+    allowed_departments: [support, product]
+  team_lead:
+    description: Support team lead
+    allowed_access_levels: [public, internal]
+    allowed_departments: [support, product, engineering]
+  admin:
+    description: Knowledge base administrator
+    allowed_access_levels: [public, internal, restricted]
+    allowed_departments: [support, product, engineering, hr]
+
+# Seed users (Step 11 will create these with hashed passwords).
+users:
+  - username: alice
+    role: agent
+  - username: bob
+    role: team_lead
+  - username: carol
+    role: admin

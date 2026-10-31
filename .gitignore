@@ -1,0 +1,11 @@
+.env
+.venv/
+__pycache__/
+*.pyc
+data/raw/
+.pytest_cache/
+.DS_Store
+
+creds.txt
+eval/reports/
+eval/golden_candidates.yaml
